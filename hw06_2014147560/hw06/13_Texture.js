@@ -34,10 +34,10 @@ LearnUs 답안 글 작성 란에
 - Applying image texture
 -----------------------------------------------------------------------------------*/
 
-import { resizeAspectRatio, Axes } from './util/util.js';
-import { Shader, readShaderFile } from './util/shader.js';
-import { Arcball } from './util/arcball.js';
-import { loadTexture } from './util/texture.js';
+import { resizeAspectRatio, Axes } from '../util/util.js';
+import { Shader, readShaderFile } from '../util/shader.js';
+import { Arcball } from '../util/arcball.js';
+import { loadTexture } from '../util/texture.js';
 import { SquarePyramid } from './squarePyramid.js';
 const canvas = document.getElementById('glCanvas');
 const gl = canvas.getContext('webgl2');
