@@ -1,10 +1,8 @@
 /*-------------------------------------------------------------------------
 10_CameraCircle.js
 
-- Viewing a 3D unit cube at origin with perspective projection
-- The cube is rotating about the x-axis with given constant speed
-- A camera is rotating around the origin through the circle of radius 5
-- The height (y position) of the camera is +2. 
+- Viewing a pyramid at origin with perspective projection
+- The pyramid is rotating about the x-axis
 - The camera is always looking at the origin.
 ---------------------------------------------------------------------------*/
 
@@ -29,7 +27,7 @@ const cameraCircleSpeed = 90.0;
 const cameraYCenter = 5.0;
 const cameraYRange = 10.0;
 const cameraYSpeed = 45.0; 
-const cube = new SquarePyramid(gl);
+const pyramid = new SquarePyramid(gl);
 const axes = new Axes(gl, 1.8);
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,7 +57,7 @@ function initWebGL() {
     canvas.height = 700;
     resizeAspectRatio(gl, canvas);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.7, 0.8, 0.9, 1.0);
+    gl.clearColor(0.1, 0.2, 0.3, 1.0);
     
     return true;
 }
@@ -98,12 +96,13 @@ function render() {
         vec3.fromValues(0, 0, 0), // look at origin
         vec3.fromValues(0, 1, 0)); // up vector
 
-    // drawing the cube
-    shader.use();  // using the cube's shader
+    // drawing the pyramid
+    shader.use();  // using the shader
     shader.setMat4('u_model', modelMatrix);
     shader.setMat4('u_view', viewMatrix);
     shader.setMat4('u_projection', projMatrix);
-    cube.draw(shader);
+    pyramid.draw(shader);
+
 
     // drawing the axes (using the axes's shader)
     axes.draw(viewMatrix, projMatrix);

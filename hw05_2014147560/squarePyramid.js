@@ -1,56 +1,36 @@
 /*-----------------------------------------------------------------------------
-class Cube
+class SquarePyramid
 
 1) Vertex positions
-    A cube has 6 faces and each face has 4 vertices
-    The total number of vertices is 24 (6 faces * 4 verts)
-    So, vertices need 72 floats (24 * 3 (x, y, z)) in the vertices array
+    5 faces
+    The total number of vertices is 16 (4 faces * 3 verts + 4 verts)
+    So, vertices need 48 floats (16 * 3 (x, y, z)) in the vertices array
 
 2) Vertex indices
     Vertex indices of the unit cube is as follows:
-     v6----- v5
-     /|      /|
-    v1------v0|
-    | |     | |
-    | v7----|-v4
-    |/      |/
-    v2------v3
-
-    The order of faces and their vertex indices is as follows:
-        front (0,1,2,3), right (0,3,4,5), top (0,5,6,1), 
-        left (1,6,7,2), bottom (7,4,3,2), back (4,7,6,5)
-    Note that each face has two triangles, 
-    so the total number of triangles is 12 (6 faces * 2 triangles)
-    And, we need to maintain the order of vertices for each triangle as 
-    counterclockwise (when we see the face from the outside of the cube):
-        front [(0,1,2), (2,3,0)]
-        right [(0,3,4), (4,5,0)]
-        top [(0,5,6), (6,1,0)]
-        left [(1,6,7), (7,2,1)]
-        bottom [(7,4,3), (3,2,7)]
-        back [(4,7,6), (6,5,4)]
+		v0
+       /  \'·.
+      v4---\--v3
+     /      \/
+    v1------v2
 
 3) Vertex normals
     Each vertex in the same face has the same normal vector (flat shading)
     The vertex normal vector is the same as the face normal vector
-    front face: (0,0,1), right face: (1,0,0), top face: (0,1,0), 
-    left face: (-1,0,0), bottom face: (0,-1,0), back face: (0,0,-1) 
+    bottom face: (0,-1,0)
 
 4) Vertex colors
     Each vertex in the same face has the same color (flat shading)
     The color is the same as the face color
-    front face: red (1,0,0,1), right face: yellow (1,1,0,1), top face: green (0,1,0,1), 
-    left face: cyan (0,1,1,1), bottom face: blue (0,0,1,1), back face: magenta (1,0,1,1) 
+    front face: red (1,0,0,1)
+    right face: yellow (1,1,0,1)
+    back face: magenta (1,0,1,1)
+    left face: cyan (0,1,1,1)
+    bottom face: blue (0,0,1,1)
 
 5) Vertex texture coordinates
     Each vertex in the same face has the same texture coordinates (flat shading)
     The texture coordinates are the same as the face texture coordinates
-    front face: v0(1,1), v1(0,1), v2(0,0), v3(1,0)
-    right face: v0(0,1), v3(0,0), v4(1,0), v5(1,1)
-    top face: v0(1,0), v5(0,0), v6(0,1), v1(1,1)
-    left face: v1(1,0), v6(0,0), v7(0,1), v2(1,1)
-    bottom face: v7(0,0), v4(0,1), v3(1,1), v2(1,0)
-    back face: v4(0,0), v7(0,1), v6(1,1), v5(1,0)
 
 6) Parameters:
     1] gl: WebGLRenderingContext
@@ -64,7 +44,7 @@ class Cube
 8) Fragment shader: should catch the vertex color from the vertex shader
 -----------------------------------------------------------------------------*/
 
-export class Cube {
+export class SquarePyramid {
     constructor(gl, options = {}) {
         this.gl = gl;
         
@@ -75,109 +55,115 @@ export class Cube {
 
         // Initializing data
         this.vertices = new Float32Array([
-            // front face  (v0,v1,v2,v3)
-            0.5,  0.5,  0.5,  -0.5,  0.5,  0.5,  -0.5, -0.5,  0.5,   0.5, -0.5,  0.5,
-            // right face  (v0,v3,v4,v5)
-            0.5,  0.5,  0.5,   0.5, -0.5,  0.5,   0.5, -0.5, -0.5,   0.5,  0.5, -0.5,
-            // top face    (v0,v5,v6,v1)
-            0.5,  0.5,  0.5,   0.5,  0.5, -0.5,  -0.5,  0.5, -0.5,  -0.5,  0.5,  0.5,
-            // left face   (v1,v6,v7,v2)
-            -0.5,  0.5,  0.5,  -0.5,  0.5, -0.5,  -0.5, -0.5, -0.5,  -0.5, -0.5,  0.5,
-            // bottom face (v7,v4,v3,v2)
-            -0.5, -0.5, -0.5,   0.5, -0.5, -0.5,   0.5, -0.5,  0.5,  -0.5, -0.5,  0.5,
-            // back face   (v4,v7,v6,v5)
-            0.5, -0.5, -0.5,  -0.5, -0.5, -0.5,  -0.5,  0.5, -0.5,   0.5,  0.5, -0.5
+            // front face  (v0,v1,v2)
+             0.0,  1.0,  0.0,
+			-0.5,  0.0,  0.5,
+			 0.5,  0.0,  0.5,
+            // right face  (v0,v2,v3)
+			 0.0,  1.0,  0.0,
+			 0.5,  0.0,  0.5,
+			 0.5,  0.0, -0.5,
+            // back face   (v0,v3,v4)
+             0.0,  1.0,  0.0,
+			 0.5,  0.0, -0.5,
+			-0.5,  0.0, -0.5,
+            // left face   (v0,v4,v1)
+             0.0,  1.0,  0.0,
+			-0.5,  0.0, -0.5,
+			-0.5,  0.0,  0.5,
+			// bottom face (v1, v4,v3,v2)
+			-0.5,  0.0,  0.5,
+			-0.5,  0.0, -0.5,
+			 0.5,  0.0, -0.5,
+			 0.5,  0.0,  0.5
         ]);
 
+
+        const sqrt5 = Math.sqrt(5);
+        const frontN = vec3.fromValues(0, 2/sqrt5, 1/sqrt5);
+        const rightN = vec3.fromValues(1/sqrt5, 2/sqrt5, 0);
+        const backN = vec3.fromValues(0, 2/sqrt5, -1/sqrt5);
+        const leftN = vec3.fromValues(-1/sqrt5, 2/sqrt5, 0);
+
         this.normals = new Float32Array([
-            // front face (v0,v1,v2,v3)
-            0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1,
-            // right face (v0,v3,v4,v5)
-            1, 0, 0,   1, 0, 0,   1, 0, 0,   1, 0, 0,
-            // top face (v0,v5,v6,v1)
-            0, 1, 0,   0, 1, 0,   0, 1, 0,   0, 1, 0,
-            // left face (v1,v6,v7,v2)
-            -1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0,
-            // bottom face (v7,v4,v3,v2)
-            0, -1, 0,   0, -1, 0,   0, -1, 0,   0, -1, 0,
-            // back face (v4,v7,v6,v5)
-            0, 0, -1,   0, 0, -1,   0, 0, -1,   0, 0, -1
+            // front face (v0,v1,v2)
+            ...frontN,   ...frontN,   ...frontN,
+            // right face
+			...rightN,   ...rightN,   ...rightN,
+            // back face
+			...backN,   ...backN,   ...backN,
+			// left face
+			...leftN,   ...leftN,   ...leftN,
+            // bottom face
+            0, -1, 0,   0, -1, 0,   0, -1, 0,   0, -1, 0
         ]);
 
         // if color is provided, set all vertices' color to the given color
         if (options.color) {
-            for (let i = 0; i < 24 * 4; i += 4) {
+            for (let i = 0; i < 16 * 4; i += 4) {
                 this.colors[i] = options.color[0];
-                this.colors[i+1] = options.color[1];
-                this.colors[i+2] = options.color[2];
-                this.colors[i+3] = options.color[3];
-            }
+                this.colors[i + 1] = options.color[1];
+                this.colors[i + 2] = options.color[2];
+				this.colors[i + 3] = options.color[3];
+			}
         }
         else {
             this.colors = new Float32Array([
-                // front face (v0,v1,v2,v3) - red
-                1, 0, 0, 1,   1, 0, 0, 1,   1, 0, 0, 1,   1, 0, 0, 1,
-                // right face (v0,v3,v4,v5) - yellow
-                1, 1, 0, 1,   1, 1, 0, 1,   1, 1, 0, 1,   1, 1, 0, 1,
-                // top face (v0,v5,v6,v1) - green
-                0, 1, 0, 1,   0, 1, 0, 1,   0, 1, 0, 1,   0, 1, 0, 1,
-                // left face (v1,v6,v7,v2) - cyan
-                0, 1, 1, 1,   0, 1, 1, 1,   0, 1, 1, 1,   0, 1, 1, 1,
-                // bottom face (v7,v4,v3,v2) - blue
+                // front face - red
+                1, 0, 0, 1,   1, 0, 0, 1,   1, 0, 0, 1,
+                // right face - yellow
+                1, 1, 0, 1,   1, 1, 0, 1,   1, 1, 0, 1,
+				// back face  - magenta
+                1, 0, 1, 1,   1, 0, 1, 1,   1, 0, 1, 1,
+                // left face - cyan
+                0, 1, 1, 1,   0, 1, 1, 1,   0, 1, 1, 1,
+                // bottom face - blue
                 0, 0, 1, 1,   0, 0, 1, 1,   0, 0, 1, 1,   0, 0, 1, 1,
-                // back face (v4,v7,v6,v5) - magenta
-                1, 0, 1, 1,   1, 0, 1, 1,   1, 0, 1, 1,   1, 0, 1, 1
             ]);
         }
 
+        // Basic texture coordinates for future texture support
         this.texCoords = new Float32Array([
-            // front face (v0,v1,v2,v3)
-            1, 1,   0, 1,   0, 0,   1, 0,
-            // right face (v0,v3,v4,v5)
-            0, 1,   0, 0,   1, 0,   1, 1,
-            // top face (v0,v5,v6,v1)
-            1, 0,   1, 1,   0, 1,   0, 0,
-            // left face (v1,v6,v7,v2)
-            1, 1,   0, 1,   0, 0,   1, 0,
-            // bottom face (v7,v4,v3,v2)
-            1, 1,   0, 1,   0, 0,   1, 0,
-            // back face (v4,v7,v6,v5)
-            0, 0,   1, 0,   1, 1,   0, 1
+            // front face (v0,v1,v2)
+            0.5, 1.0,   0.0, 0.0,   1.0, 0.0,
+            // right face (v0,v2,v3)
+            0.5, 1.0,   0.0, 0.0,   1.0, 0.0,
+            // back face (v0,v3,v4)
+            0.5, 1.0,   0.0, 0.0,   1.0, 0.0,
+            // left face (v0,v4,v1)
+            0.5, 1.0,   0.0, 0.0,   1.0, 0.0,
+            // bottom face (v1,v4,v3,v2) - square
+            0.0, 1.0,   0.0, 0.0,   1.0, 0.0,   1.0, 1.0
         ]);
 
         this.indices = new Uint16Array([
             // front face
-            0, 1, 2,   2, 3, 0,      // v0-v1-v2, v2-v3-v0
+            0, 1, 2,        // v0-v1-v2
             // right face
-            4, 5, 6,   6, 7, 4,      // v0-v3-v4, v4-v5-v0
-            // top face
-            8, 9, 10,  10, 11, 8,    // v0-v5-v6, v6-v1-v0
-            // left face
-            12, 13, 14,  14, 15, 12, // v1-v6-v7, v7-v2-v1
-            // bottom face
-            16, 17, 18,  18, 19, 16, // v7-v4-v3, v3-v2-v7
+            3, 4, 5,      // v0-v2-v3
             // back face
-            20, 21, 22,  22, 23, 20  // v4-v7-v6, v6-v5-v4
+			6, 7, 8,      // v0-v3-v4
+            // left face
+			9, 10, 11,    // v0-v4-v1
+            // bottom face
+			12, 13, 14, 12, 14, 15   // v1-v4-v3-v2
         ]);
 
         this.sameVertices = new Uint16Array([
-            0, 4, 8,    // indices of the same vertices as v0
-            1, 11, 12,  // indices of the same vertices as v1
-            2, 15, 19,  // indices of the same vertices as v2
-            3, 5, 18,   // indices of the same vertices as v3
-            6, 17, 20,  // indices of the same vertices as v4
-            7, 9, 23,   // indices of the same vertices as v5
-            10, 13, 22, // indices of the same vertices as v6
-            14, 16, 21  // indices of the same vertices as v7
+            0, 3, 7,    // indices of the same vertices as v0
+            1, 11,   // indices of the same vertices as v1
+            2, 4,  // indices of the same vertices as v2
+            3, 5,  // indices of the same vertices as v3
+            6, 7  // indices of the same vertices as v4
         ]);
 
-        this.vertexNormals = new Float32Array(72);
-        this.faceNormals = new Float32Array(72);
+        this.vertexNormals = new Float32Array(48);
+        this.faceNormals = new Float32Array(48);
         this.faceNormals.set(this.normals);
 
         // compute vertex normals (by averaging face normals)
 
-        for (let i = 0; i < 24; i += 3) {
+        for (let i = 0; i < 16; i += 3) {
 
             let vn_x = (this.normals[this.sameVertices[i]*3] + 
                        this.normals[this.sameVertices[i+1]*3] + 
@@ -273,7 +259,7 @@ export class Cube {
         const gl = this.gl;
         shader.use();
         gl.bindVertexArray(this.vao);
-        gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, 18, gl.UNSIGNED_SHORT, 0);
         gl.bindVertexArray(null);
     }
 
