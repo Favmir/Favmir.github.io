@@ -138,7 +138,7 @@ async function initShader() {
     const fragmentShaderSource2 = await readShaderFile('shFrag_Gouraud.glsl');
     shaderGouraud = new Shader(gl, vertexShaderSource2, fragmentShaderSource2);
 
-    shader = shaderGouraud; // default shader
+    shader = shaderPhong; // default shader
 }
 
 async function initLampShader() {
