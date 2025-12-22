@@ -229,7 +229,7 @@ class Car {
 		this.steerInput = 0;
 		this.handbrake = false;
 
-		// Wheels (front steer, rear drive) – can be remapped to your model
+		// Wheels
 		this.wheels = [
 			new Wheel({ name: "wheel_fl", isSteerable: true,  isDriven: false }),
 			new Wheel({ name: "wheel_fr", isSteerable: true,  isDriven: false }),
@@ -254,14 +254,16 @@ class Car {
 		this.model = gltfScene;
 		this.root.add(gltfScene);
 
-		// Try to auto-find wheel objects by common names.
 		// In Blender, name them exactly: wheel_fl, wheel_fr, wheel_rl, wheel_rr
-		// wheel_fl_steer must be parent of wheel_fl to make wheels tilt
+		// Add wheel_fl_steer as parent of wheel_fl to make wheels tilt
 		for (const w of this.wheels) {
             const steer = gltfScene.getObjectByName(`${w.name}_steer`) ?? null;
 			const wheel = gltfScene.getObjectByName(w.name) ?? null;
 			this.modelWheelNodess.set(w.name, {steer, wheel});
 		}
+		//
+		//const steeringWheel = gltfScene.getObjectByName(`steering`);
+		
 	}
 
 	reset() {
@@ -333,14 +335,13 @@ class Car {
 		// Compute per-wheel normal load (simple equal distribution)
 		const perWheel = this.weight / this.wheels.length;
 		for (const w of this.wheels) w.normalLoad = perWheel;
-
-		// --- Your requested structure ---
+-
 		this.update_engine(dt);
 		for (const w of this.wheels) w.update_tire(this, dt);
 		this.update_chassis(dt);
 	}
 /*
-	stepPhysics(dt) {
+	function stepPhysics(dt) {
 		// Input -> forces
 		const throttle = input.throttle; // 0..1
 		const brake = input.brake;       // 0..1
@@ -374,9 +375,7 @@ class Car {
 */
 
 	syncVisual(alpha) {
-		// alpha = interpolation factor (0..1) if you later keep previous state.
-		// For now, we just directly sync to physics state.
-
+		
 		this.root.position.copy(this.pos);
 		this.root.rotation.set(0, this.yaw, 0);
 
@@ -391,7 +390,7 @@ class Car {
             if (node.wheel) {
                 node.wheel.rotation.x += w.angularVel * FIXED_DT;
             }
-        }
+        }		
 	}
 }
 
@@ -451,7 +450,7 @@ loader.load(
 			if (o.isMesh){
 				addStaticTrimeshFromThreeMesh(o);
 				o.castShadow = false;
-				o.receiveShadow = false;
+				o.receiveShadow = false;		
 			}
 		});
 
@@ -576,11 +575,10 @@ function renderViewports() {
 
 	renderer.setScissorTest(true);
 
-	// Define 2x2 tiles
 	const sideWidth = Math.floor(width / 4);
 	const sideHeight = Math.floor(height / 5);
 
-	// Utility: render one viewport
+	
 	function draw(cam, x, y, vw, vh) {
 		cam.aspect = vw / vh;
 		cam.updateProjectionMatrix();
@@ -632,7 +630,7 @@ function renderLoop() {
 		physicsStepFixed(FIXED_DT);
 		accumulator -= FIXED_DT;
 		steps++;
-		if (steps > 10) break; // safety; should be rare due to MAX_ACCUM
+		if (steps > 10) break;
 	}
 	endFrameInput();
 
