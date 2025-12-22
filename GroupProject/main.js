@@ -11,11 +11,15 @@ const MAX_ACCUM = 0.25;						// clamp accumulator to avoid spiral of death
 let accumulator = 0;
 let lastTime = performance.now() / 1000;
 
+
+const noFlipMirrors = 1;	// flipping viewports also turns faces inside out 
+
 // ---------- THREE scene ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x0b0e14, 40, 220);
@@ -237,6 +241,7 @@ class Car {
 
 		// Try to auto-find wheel objects by common names.
 		// In Blender, name them exactly: wheel_fl, wheel_fr, wheel_rl, wheel_rr
+		// wheel_fl_steer must be parent of wheel_fl to make wheels tilt
 		for (const w of this.wheels) {
             const steer = gltfScene.getObjectByName(`${w.name}_steer`) ?? null;
 			const wheel = gltfScene.getObjectByName(w.name) ?? null;
@@ -362,7 +367,7 @@ function makePlaceholderCar() {
 	car.root.add(cabin);
 }
 
-// Load model (put your exported file at: ./assets/car.glb)
+// Load model (./assets/car.glb)
 const loader = new GLTFLoader();
 loader.load(
 	"./assets/car.glb",
@@ -371,6 +376,7 @@ loader.load(
 		const model = gltf.scene;
 		model.traverse((o) => {
 			if (o.isMesh) {
+
 				o.castShadow = false;
 				o.receiveShadow = false;
 			}
@@ -412,17 +418,24 @@ function updateViewCameras(dt) {
 	const up = new THREE.Vector3(0,1,0);
 
 	const targetBack = car.pos.clone()
-	.add(new THREE.Vector3(0, 1.0, 0))          // height offset
-	.addScaledVector(forward, -30);             // 30 units behind car
+	.add(new THREE.Vector3(0, 0.5, 0))          // height offset
+	.addScaledVector(forward, -10);             // 30 units behind car
+
 
 
 	// Distances/heights (tweak)
+	
+	const driverOffset =
+		new THREE.Vector3(0.35, 1.35, -0.4)  // x, y, z in car-local-ish terms
+			.addScaledVector(right, 0.0)
+	;
 	const sideDist = -1.1;
 	const sideHeight = 1.2;
 	const sideForward = 0.7;
+	const sideTargetDist = 10;
 
-	const backDist = 1.4;
-	const backHeight = 1.4;
+	const backDist = 1.1;
+	const backHeight = 1.5;
 
 	// Left side view (camera sits to car's left, looking at car)
 	{
@@ -431,7 +444,7 @@ function updateViewCameras(dt) {
 			.addScaledVector(forward, sideForward)
 			.add(new THREE.Vector3(0, sideHeight, 0));
 		camLeft.position.copy(desired);
-		camLeft.lookAt(targetBack);
+		camLeft.lookAt(targetBack.clone().addScaledVector(right,sideTargetDist));
 	}
 
 	// Right side view
@@ -441,7 +454,7 @@ function updateViewCameras(dt) {
 			.addScaledVector(forward, sideForward)
 			.add(new THREE.Vector3(0, sideHeight, 0));
 		camRight.position.copy(desired);
-		camRight.lookAt(targetBack);
+		camRight.lookAt(targetBack.clone().addScaledVector(right,-sideTargetDist));
 	}
 
 	// Back view
@@ -455,21 +468,18 @@ function updateViewCameras(dt) {
 
 	// Driver view (positioned inside/near cabin, looking forward)
 	{
-		// Where the driver's head would be relative to the car origin
-		const driverOffset =
-			new THREE.Vector3(0.4, 1.35, 0.4)  // x, y, z in car-local-ish terms
-				.addScaledVector(right, 0.0)      // (kept explicit if you want to tweak)
-		;
-
 		// Convert approximate local offset to world using forward/right (since we’re planar)
 		const desired = car.pos.clone()
 			.addScaledVector(right, driverOffset.x)
 			.add(new THREE.Vector3(0, driverOffset.y, 0))
 			.addScaledVector(forward, driverOffset.z);
 
-		camDriver.position.lerp(desired, 1 - Math.exp(-dt * 14));
+		camDriver.position.lerp(desired, 1 - Math.exp(-dt * 50));
 
-		const lookPoint = camDriver.position.clone().addScaledVector(forward, 10).add(new THREE.Vector3(0, 0.1, 0));
+		const lookPoint = camDriver.position.clone()
+		.addScaledVector(forward, 10)
+		.addScaledVector(right,-1.5)
+		.add(new THREE.Vector3(0, 0.1, 0));
 		camDriver.lookAt(lookPoint);
 	}
 }
@@ -477,23 +487,6 @@ function updateViewCameras(dt) {
 
 function physicsStepFixed(dt) {
 	car.stepPhysics(dt);
-}
-
-function renderView(cam, left, bottom, width, height) {
-	const w = Math.floor(width);
-	const h = Math.floor(height);
-	const x = Math.floor(left);
-	const y = Math.floor(bottom);
-
-	renderer.setViewport(x, y, w, h);
-	renderer.setScissor(x, y, w, h);
-	renderer.setScissorTest(true);
-
-	// Optional: adjust FOV per view if you want (driver often wider)
-	cam.aspect = w / h;
-	cam.updateProjectionMatrix();
-
-	renderer.render(scene, cam);
 }
 
 function renderViewports() {
@@ -511,9 +504,15 @@ function renderViewports() {
 		cam.aspect = vw / vh;
 		cam.updateProjectionMatrix();
 
+		if (cam === camLeft || cam === camRight || cam === camBack){
+			const flippedMatrix = cam.projectionMatrix.clone();
+			flippedMatrix.elements[noFlipMirrors] *= -1;
+			cam.projectionMatrix.copy(flippedMatrix);
+		}
 		renderer.setViewport(x, y, vw, vh);
 		renderer.setScissor(x, y, vw, vh);
 		renderer.render(scene, cam);
+	
 	}
 
 	// Note: WebGL viewport origin is bottom-left.

@@ -4,7 +4,6 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>Three.js Car Controller (Fixed Timestep)</title>
-	
 	<script type="importmap">
 	{
 		"imports": {
@@ -16,7 +15,7 @@
 	<style>
 		html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e14; }
 		#hud {
-			position: absolute; left: 12px; top: 12px;
+			position: absolute; left: 12px; bottom: 12px;
 			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 			font-size: 12px; line-height: 1.35;
 			color: #cbd5e1; background: rgba(0,0,0,0.45);
@@ -30,15 +29,11 @@
 <body>
 	<div id="hud">
 		<div><b>Controls</b></div>
-		<div>W/S: throttle / brake</div>
-		<div>A/D: steer</div>
-		<div>Space: handbrake</div>
 		<div>R: reset</div>
 		<hr style="border:none;border-top:1px solid rgba(255,255,255,0.15); margin:8px 0;">
 		<div id="stats"></div>
 	</div>
 
-	
 	<script type="module" src="./main.js"></script>
 </body>
 </html>
