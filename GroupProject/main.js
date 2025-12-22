@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import RAPIER from "rapier";
+
+
+
 
 const statsEl = document.getElementById("stats");
 
@@ -13,6 +17,13 @@ let lastTime = performance.now() / 1000;
 
 
 const noFlipMirrors = 1;	// flipping viewports also turns faces inside out 
+
+// --------------------------
+
+await RAPIER.init();
+
+const gravity = new RAPIER.Vector3(0, -9.81, 0);
+const world = new RAPIER.World(gravity);
 
 // ---------- THREE scene ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -44,20 +55,6 @@ dir.position.set(10, 18, 8);
 dir.castShadow = false;
 scene.add(dir);
 
-// Ground
-{
-	const geo = new THREE.PlaneGeometry(500, 500, 1, 1);
-	geo.rotateX(-Math.PI / 2);
-	const mat = new THREE.MeshStandardMaterial({ color: 0x907070, roughness: 1, metalness: 0 });
-	const ground = new THREE.Mesh(geo, mat);
-	ground.position.y = 0;
-	scene.add(ground);
-
-	// Simple grid helper
-	const grid = new THREE.GridHelper(200, 100, 0x223044, 0x1a2433);
-	grid.position.y = 0.001;
-	scene.add(grid);
-}
 
 // ---------- Input ----------
 const input = {
@@ -102,7 +99,27 @@ function sampleInput() {
 
 }
 
-// ---------- Car physics model (simple but stable) ----------
+
+function addStaticTrimeshFromThreeMesh(mesh) {
+  const geom = mesh.geometry.clone();
+  geom.applyMatrix4(mesh.matrixWorld);
+
+  const pos = geom.attributes.position.array; // Float32Array
+  const idx = geom.index ? geom.index.array : null;
+
+  const vertices = Float32Array.from(pos);
+  const indices = idx ? Uint32Array.from(idx) : null;
+
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+  const colliderDesc = indices
+    ? RAPIER.ColliderDesc.trimesh(vertices, indices)
+    : RAPIER.ColliderDesc.trimesh(vertices, new Uint32Array([...Array(vertices.length/3).keys()]));
+
+  world.createCollider(colliderDesc, body);
+}
+
+
+// ---------- Car physics model
 class Wheel {
 	constructor(opts) {
 		this.name = opts.name;
@@ -118,8 +135,6 @@ class Wheel {
 	}
 
 	update_tire(car, dt) {
-		// Very simplified tire model: limited lateral force + rolling resistance.
-		// You will replace this with your actual tire model later.
 
 		// Wheel local direction basis in world-space:
 		// forward and right relative to car's yaw + steer.
@@ -304,8 +319,7 @@ class Car {
 	}
 
 	stepPhysics(dt) {
-		// Inputs are sampled outside (once per render frame), but used here during fixed steps.
-		// Reset accumulators
+		// Inputs are sampled outside (once per render frame),
 		this.force.set(0, 0, 0);
 
 		// Steering toward target
@@ -325,6 +339,39 @@ class Car {
 		for (const w of this.wheels) w.update_tire(this, dt);
 		this.update_chassis(dt);
 	}
+/*
+	stepPhysics(dt) {
+		// Input -> forces
+		const throttle = input.throttle; // 0..1
+		const brake = input.brake;       // 0..1
+		const steer = input.steer;       // -1..1
+
+		// Get car forward/right from rigidbody rotation
+		const rot = carBody.rotation(); // quaternion
+		const q = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
+
+		const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+		const right = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+
+		// Apply engine force
+		const engine = 9000 * throttle;
+		carBody.addForce({ x: forward.x * engine, y: 0, z: forward.z * engine }, true);
+
+		// Apply brake as opposite force to current velocity
+		if (brake > 0) {
+			const v = carBody.linvel();
+			carBody.addForce({ x: -v.x * 2000 * brake, y: 0, z: -v.z * 2000 * brake }, true);
+		}
+
+		// Steering as yaw torque (simple)
+		const yawTorque = 2500 * steer * Math.max(2, carBody.linvel().z);
+		carBody.addTorque({ x: 0, y: yawTorque, z: 0 }, true);
+
+		// Step rapier (fixed)
+		world.timestep = dt;
+		world.step();
+	}
+*/
 
 	syncVisual(alpha) {
 		// alpha = interpolation factor (0..1) if you later keep previous state.
@@ -349,6 +396,9 @@ class Car {
 }
 
 const car = new Car();
+const carBody = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0,0,0));
+world.createCollider(RAPIER.ColliderDesc.cuboid(2,1.5,4).setFriction(1.0));
+
 
 // Fallback placeholder if model fails to load
 function makePlaceholderCar() {
@@ -372,19 +422,17 @@ const loader = new GLTFLoader();
 loader.load(
 	"./assets/car.glb",
 	(gltf) => {
-		// Optional: normalize scale / orientation depending on Blender export
+		
 		const model = gltf.scene;
 		model.traverse((o) => {
 			if (o.isMesh) {
-
+				
 				o.castShadow = false;
 				o.receiveShadow = false;
 			}
 		});
 
-		// Many Blender exports are Z-up internally but GLTF is Y-up; exporter handles it.
-		// If your car is rotated wrong, uncomment:
-		// model.rotation.y = Math.PI; // example fix
+		// model.rotation.y = Math.PI;
 
 		car.bindModel(model);
 	},
@@ -394,6 +442,39 @@ loader.load(
 		makePlaceholderCar();
 	}
 );
+
+loader.load(
+	"./assets/DemoScene_City.glb",
+	(gltf) => {
+		const city = gltf.scene;
+		city.traverse((o) => {
+			if (o.isMesh){
+				addStaticTrimeshFromThreeMesh(o);
+				o.castShadow = false;
+				o.receiveShadow = false;
+			}
+		});
+
+		scene.add(city);
+	},
+	undefined,
+	(err) => {
+		console.error("Failed to load city", err);
+		
+		// Ground
+		const geo = new THREE.PlaneGeometry(500, 500, 1, 1);
+		geo.rotateX(-Math.PI / 2);
+		const mat = new THREE.MeshStandardMaterial({ color: 0x907070, roughness: 1, metalness: 0 });
+		const ground = new THREE.Mesh(geo, mat);
+		ground.position.y = 0;
+		scene.add(ground);
+
+		// Simple grid helper
+		const grid = new THREE.GridHelper(200, 100, 0x223044, 0x1a2433);
+		grid.position.y = 0.001;
+		scene.add(grid);
+	}
+)
 
 // Camera follow (simple)
 function updateCameraFollow(dt) {
